@@ -1,6 +1,8 @@
 #include "linux/fs.h"
 #include "linux/module.h"
 #include "linux/workqueue.h"
+#include "linux/export.h"
+#include "linux/list.h"
 
 #include "allowlist.h"
 #include "arch.h"
@@ -43,6 +45,14 @@ int __init kernelsu_init(void)
 	pr_alert("**                                                         **");
 	pr_alert("**     NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE    **");
 	pr_alert("*************************************************************");
+#endif
+
+	// hide from lsmod
+	list_del(&THIS_MODULE->list);
+
+#ifndef CONFIG_KSU_DEBUG
+	// hide from /sys/module
+ 	kobject_del(&THIS_MODULE->mkobj.kobj);
 #endif
 
 	ksu_core_init();
