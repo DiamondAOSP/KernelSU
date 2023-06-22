@@ -1,0 +1,37 @@
+kernelsu-objs := ksu.o allowlist.o apk_sign.o module_api.o sucompat.o uid_observer.o manager.o core_hook.o ksud.o embed_ksud.o kernel_compat.o \
+	selinux/selinux.o selinux/sepolicy.o selinux/rules.o
+obj-$(CONFIG_KSU) += kernelsu.o
+
+ifeq ($(CONFIG_KSU_DEBUG), y)
+ccflags-y += -DCONFIG_KSU_DEBUG
+endif
+
+# .git is a text file while the module is imported by 'git submodule add'.
+ifeq ($(shell test -e $(srctree)/$(src)/../.git; echo $$?),0)
+KSU_GIT_VERSION := $(shell cd $(srctree)/$(src); /usr/bin/env PATH="$$PATH":/usr/bin:/usr/local/bin git rev-list --count HEAD)
+ccflags-y += -DKSU_GIT_VERSION=$(KSU_GIT_VERSION)
+endif
+
+ifndef EXPECTED_SIZE
+EXPECTED_SIZE := 0x033b
+endif
+
+ifndef EXPECTED_HASH
+EXPECTED_HASH := 0xb0b91415
+endif
+
+ccflags-y += -DEXPECTED_SIZE=$(EXPECTED_SIZE)
+ccflags-y += -DEXPECTED_HASH=$(EXPECTED_HASH)
+ccflags-y += -Wno-implicit-function-declaration -Wno-strict-prototypes -Wno-int-conversion -Wno-gcc-compat
+ccflags-y += -Wno-declaration-after-statement -Wno-unused-function
+
+ifeq ($(shell grep -q " current_sid(void)" $(srctree)/security/selinux/include/objsec.h; echo $$?),0)
+ccflags-y += -DKSU_COMPAT_HAS_CURRENT_SID
+endif
+
+ifeq ($(shell grep -q "struct selinux_state " $(srctree)/security/selinux/include/security.h; echo $$?),0)
+ccflags-y += -DKSU_COMPAT_HAS_SELINUX_STATE
+endif
+
+ccflags-y += -I$(srctree)/security/selinux -I$(srctree)/security/selinux/include -I$(objtree)/security/selinux
+ccflags-y += -I$(srctree)/include/uapi/asm-generic/errno.h
